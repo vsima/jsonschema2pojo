@@ -37,50 +37,57 @@ class GenerateJsonSchemaTask extends DefaultTask {
     outputs.upToDateWhen { false }
 
     project.afterEvaluate {
-      configuration = project.jsonSchema2Pojo
-      configuration.targetDirectory = configuration.targetDirectory ?:
-        project.file("${project.buildDir}/generated-sources/js2p")
+      configuration = project.jsonSchema2Pojo.configList
+      configuration.each { config ->
+        println config
+        config.targetDirectory = config.targetDirectory ?:
+          project.file("${project.buildDir}/generated-sources/js2p")
 
-      if (project.plugins.hasPlugin('java')) {
-        configureJava()
-      } else if (project.plugins.hasPlugin('com.android.application')) {
-        configureAndroid(AndroidProject.APP)
-      } else if (project.plugins.hasPlugin('com.android.library')) {
-        configureAndroid(AndroidProject.LIBRARY)
-      } else {
-        throw new GradleException('generateJsonSchema: Java or Android plugin required')
+        if (project.plugins.hasPlugin('java')) {
+          configureJava()
+        } else if (project.plugins.hasPlugin('com.android.application')) {
+          configureAndroid(AndroidProject.APP)
+        } else if (project.plugins.hasPlugin('com.android.library')) {
+          configureAndroid(AndroidProject.LIBRARY)
+        } else {
+          throw new GradleException('generateJsonSchema: Java or Android plugin required')
+        }
+        outputs.dir config.targetDirectory
       }
-      outputs.dir configuration.targetDirectory
     }
   }
 
   def configureJava() {
-    project.sourceSets.main.java.srcDirs += [ configuration.targetDirectory ]
-    dependsOn(project.tasks.processResources)
-    project.tasks.compileJava.dependsOn(this)
+    configuration.each { config ->
+      project.sourceSets.main.java.srcDirs += [ config.targetDirectory ]
+      dependsOn(project.tasks.processResources)
+      project.tasks.compileJava.dependsOn(this)
 
-    if (!configuration.source.hasNext()) {
-      configuration.source = project.files("${project.sourceSets.main.output.resourcesDir}/json")
-      configuration.sourceFiles.each { it.mkdir() }
+      if (!config.source.hasNext()) {
+        config.source = project.files("${project.sourceSets.main.output.resourcesDir}/json")
+        config.sourceFiles.each { it.mkdir() }
+      }
     }
   }
 
   def configureAndroid(AndroidProject androidProject) {
     def android = project.extensions.android
-    android.sourceSets.main.java.srcDirs += [ configuration.targetDirectory ]
+    configuration.each { config ->
+      android.sourceSets.main.java.srcDirs += [ config.targetDirectory ]
 
-    android.(getVariantProperty(androidProject)).all { variant ->
-      dependsOn("process${variant.name.capitalize()}Resources")
-      variant.javaCompile.dependsOn(this)
-    }
+      android.(getVariantProperty(androidProject)).all { variant ->
+        dependsOn("process${variant.name.capitalize()}Resources")
+        variant.javaCompile.dependsOn(this)
+      }
 
-    if (!configuration.source.hasNext()) {
-      configuration.sourceFiles = project.files(
-        android.sourceSets.main.resources.srcDirs.collect {
-          "${it}/json"
-        }.findAll {
-          project.file(it).exists()
-        })
+      if (!config.source.hasNext()) {
+        config.sourceFiles = project.files(
+          android.sourceSets.main.resources.srcDirs.collect {
+            "${it}/json"
+          }.findAll {
+            project.file(it).exists()
+          })
+      }
     }
   }
 
@@ -97,7 +104,9 @@ class GenerateJsonSchemaTask extends DefaultTask {
 
   @TaskAction
   def generate() {
-    logger.info 'Using this configuration:\n{}', configuration
-    Jsonschema2Pojo.generate(configuration)
+    configuration.each { config ->
+      logger.info 'Using this configuration:\n{}', config
+      Jsonschema2Pojo.generate(config)
+    }
   }
 }

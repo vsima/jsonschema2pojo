@@ -22,3 +22,5 @@ build/
 # Scratch files
 .#*
 .*.swp
+
+.DS_Store

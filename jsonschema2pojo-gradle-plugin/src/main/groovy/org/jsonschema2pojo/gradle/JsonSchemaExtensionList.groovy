@@ -15,19 +15,24 @@
  */
 package org.jsonschema2pojo.gradle
 
-import org.gradle.api.Plugin
-import org.gradle.api.Project
-import java.util.List
+import org.jsonschema2pojo.AnnotationStyle
+import org.jsonschema2pojo.Annotator
+import org.jsonschema2pojo.AllFileFilter
+import org.jsonschema2pojo.GenerationConfig
+import org.jsonschema2pojo.NoopAnnotator
+import org.jsonschema2pojo.SourceType
+import org.jsonschema2pojo.rules.RuleFactory
+
 /**
- * Registers the plugin's tasks.
+ * The configuration properties array.
  *
  * @author Ben Manes (ben.manes@gmail.com)
+ * @see https://github.com/joelittlejohn/jsonschema2pojo
  */
-class JsonSchemaPlugin implements Plugin<Project> {
+public class JsonSchemaExtensionList {
+  JsonSchemaExtension[] configList
 
-  @Override
-  public void apply(Project project) {
-    project.extensions.create('jsonSchema2Pojo', JsonSchemaExtensionList)
-    project.tasks.create('generateJsonSchema2Pojo', GenerateJsonSchemaTask)
+  public JsonSchemaExtensionList() {
+    configList = [] as JsonSchemaExtension[]
   }
 }
